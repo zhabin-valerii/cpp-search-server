@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include <numeric>
+#include <cassert>
 
 using namespace std;
 
@@ -75,11 +76,7 @@ public:
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
-        documents_.emplace(document_id,
-            DocumentData{
-                ComputeAverageRating(ratings),
-                status
-            });
+        documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings),status });
     }
 
 
@@ -105,7 +102,7 @@ public:
     }
 
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
-        return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus stat, int rating) { return stat == status; });
+        return FindTopDocuments(raw_query, [status](int, DocumentStatus stat, int) { return stat == status; });
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -167,7 +164,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = accumulate(ratings.begin(),ratings.end(),0);
+        int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -255,10 +252,135 @@ private:
         return matched_documents;
     }
 };
+// ------ Начало модульных тестов поисковой системы -----
+void TestExcludeStopWordsFromAddedDocumentContent() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        assert(found_docs.size() == 1);
+        const Document& doc0 = found_docs[0];
+        assert(doc0.id == doc_id);
+    }
+    {
+        SearchServer server;
+        server.SetStopWords("in the"s);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        assert(server.FindTopDocuments("in"s).empty());
+    }
+}
 
+void TestMinusWords() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        assert(server.FindTopDocuments("-cat").empty());
+    }
+}
+void TestMatching() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto match_doc = server.MatchDocument("cat", 42);
+        vector<string> words = { "cat", };
+        tuple<vector<string>, DocumentStatus> match_doc0 = { words,DocumentStatus::ACTUAL };
+        assert(match_doc == match_doc0);
+    }
+}
+void TestSortOfRelevance() {
+    const int doc_id1 = 42;
+    const string content1 = "cat in the city"s;
+    const vector<int> ratings1 = { 1, 2, 3 };
+    const int doc_id2 = 43;
+    const string content2 = "dog in the city"s;
+    const vector<int> ratings2 = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        const auto found_docs = server.FindTopDocuments("cat in the city");
+        const Document& doc0 = found_docs[0];
+        const Document& doc1 = found_docs[1];
+        assert(doc0.id == doc_id1);
+        assert(doc1.id == doc_id2);
+    }
+}
+void TestRating() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("cat"s);
+        const Document& doc0 = found_docs[0];
+        assert(doc0.rating == 2);
+    }
+}
+void TestPredicate() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
+            { return document_id % 2 == 0; });
+        assert(found_docs.size() == 1);
+        const auto found_docs0 = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
+            { return document_id % 2 != 0; });
+        assert(found_docs0.empty());
+    }
+}
+void TestStatus() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::IRRELEVANT, ratings);
+        const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
+        assert(found_docs.size() == 1);
+    }
+}
+void TestRelevance() {
+    const int doc_id0 = 42;
+    const string content0 = "cat in the city"s;
+    const vector<int> ratings0 = { 1, 2, 3 };
+    const int doc_id1 = 43;
+    const string content1 = "dog in the city"s;
+    const vector<int> ratings1 = { 1, 2, 3 };
+    {
+        SearchServer server;
+        server.AddDocument(doc_id0, content0, DocumentStatus::ACTUAL, ratings0);
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
+        const double rel = (log(2.0 / 1)) * 0.25;
+        const auto find_doc = server.FindTopDocuments("cat"s);
+        const double find_rel = find_doc[0].relevance;
+        assert(rel == find_rel);
+    }
+}
 
-// ==================== для примера =========================
-
+void TestSearchServer() {
+    TestExcludeStopWordsFromAddedDocumentContent();
+    TestMinusWords();
+    TestMatching();
+    TestSortOfRelevance();
+    TestRating();
+    TestPredicate();
+    TestStatus();
+    TestRelevance();
+}
+// --------- Окончание модульных тестов поисковой системы -----------
 
 void PrintDocument(const Document& document) {
     cout << "{ "s
@@ -269,6 +391,9 @@ void PrintDocument(const Document& document) {
 }
 
 int main() {
+    TestSearchServer();
+    cout << "Search server testing finished"s << endl;
+
     SearchServer search_server;
     search_server.SetStopWords("и в на"s);
 
