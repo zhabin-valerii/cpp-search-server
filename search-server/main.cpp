@@ -252,6 +252,91 @@ private:
         return matched_documents;
     }
 };
+
+template <typename Key, typename Value>
+ostream& operator<<(ostream& out, const pair<Key, Value>& container) {
+    out << container.first;
+    out << ": ";
+    out << container.second;
+    return out;
+}
+ostream& operator<<(ostream& out, const Document& doc) {
+    out << "(id = "s << doc.id << ","s;
+    out << " relevance = "s << doc.relevance << ","s;
+    out << " ratind = "s << doc.rating << ")"s;
+    return out;
+}
+template <typename Container>
+void Print(ostream& out, const Container& container) {
+    bool is_first = true;
+    for (const auto& element : container) {
+        if (!is_first) {
+            out << ", "s;
+        }
+        is_first = false;
+        out << element;
+    }
+}
+template<typename Element>
+ostream& operator<<(ostream& out, const set<Element>& container) {
+    out << "{"s;
+    Print(out, container);
+    out << "}"s;
+    return out;
+}
+
+template<typename Key, typename Value>
+ostream& operator<<(ostream& out, const map<Key, Value>& container) {
+    out << "{"s;
+    Print(out, container);
+    out << "}"s;
+    return out;
+}
+
+template<typename Element>
+ostream& operator<<(ostream& out, const vector<Element>& container) {
+    out << "["s;
+    Print(out, container);
+    out << "]"s;
+    return out;
+}
+
+void AssertImpl(bool val, const string& str_val, const string& file, const string& func, unsigned line, const string& hint) {
+    if (!val) {
+        cerr << file << "("s << line << "): "s << func << ": "s;
+        cerr << "ASSERT("s << str_val << ") failed."s;
+        if (!hint.empty()) {
+            cerr << " Hint: "s << hint;
+        }
+        cerr << endl;
+        abort();
+    }
+}
+
+template<typename A, typename B>
+void AssertEqualImpl(const A& a, const B& b, const string& str_a, const string& str_b,
+    const string& file, const string& func, unsigned line, const string& hint) {
+    if (a != b) {
+        cerr << boolalpha;
+        cerr << file << "("s << line << "): "s << func << ": "s;
+        cerr << "ASSERT_EQUAL("s << str_a << ", "s << str_b << ") failed: "s;
+        cerr << a << " != "s << b << "."s;
+        if (!hint.empty()) {
+            cerr << " Hint: "s << hint;
+        }
+        cerr << endl;
+        abort();
+    }
+}
+
+#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__,__FUNCTION__,__LINE__,""s)
+
+#define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__,__FUNCTION__,__LINE__,hint)
+
+#define ASSERT(val) AssertImpl((val),#val,__FILE__,__FUNCTION__,__LINE__,""s)
+
+#define ASSERT_HINT(val, hint) AssertImpl((val),#val,__FILE__,__FUNCTION__,__LINE__,hint)
+
 // ------ Начало модульных тестов поисковой системы -----
 void TestExcludeStopWordsFromAddedDocumentContent() {
     const int doc_id = 42;
@@ -261,15 +346,16 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
-        assert(found_docs.size() == 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
-        assert(doc0.id == doc_id);
+        ASSERT_EQUAL(doc0.id, doc_id);
     }
+
     {
         SearchServer server;
         server.SetStopWords("in the"s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        assert(server.FindTopDocuments("in"s).empty());
+        ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
 }
 
@@ -280,7 +366,7 @@ void TestMinusWords() {
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        assert(server.FindTopDocuments("-cat").empty());
+        ASSERT(server.FindTopDocuments("-cat").empty());
     }
 }
 void TestMatching() {
@@ -291,9 +377,9 @@ void TestMatching() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto match_doc = server.MatchDocument("cat", 42);
-        vector<string> words = { "cat", };
-        tuple<vector<string>, DocumentStatus> match_doc0 = { words,DocumentStatus::ACTUAL };
-        assert(match_doc == match_doc0);
+        vector<string> words = { "cat" };
+        ASSERT_EQUAL(get<0>(match_doc), words);
+        ASSERT(get<1>(match_doc) == DocumentStatus::ACTUAL);
     }
 }
 void TestSortOfRelevance() {
@@ -310,8 +396,8 @@ void TestSortOfRelevance() {
         const auto found_docs = server.FindTopDocuments("cat in the city");
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
-        assert(doc0.id == doc_id1);
-        assert(doc1.id == doc_id2);
+        ASSERT_EQUAL(doc0.id, doc_id1);
+        ASSERT_EQUAL(doc1.id, doc_id2);
     }
 }
 void TestRating() {
@@ -323,7 +409,7 @@ void TestRating() {
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("cat"s);
         const Document& doc0 = found_docs[0];
-        assert(doc0.rating == 2);
+        ASSERT_EQUAL_HINT(doc0.rating, 2, "The rating does not match"s);
     }
 }
 void TestPredicate() {
@@ -335,10 +421,10 @@ void TestPredicate() {
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
             { return document_id % 2 == 0; });
-        assert(found_docs.size() == 1);
+        ASSERT_EQUAL(found_docs.size(), 1);
         const auto found_docs0 = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
             { return document_id % 2 != 0; });
-        assert(found_docs0.empty());
+        ASSERT(found_docs0.empty());
     }
 }
 void TestStatus() {
@@ -349,7 +435,7 @@ void TestStatus() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::IRRELEVANT, ratings);
         const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
-        assert(found_docs.size() == 1);
+        ASSERT_EQUAL(found_docs.size(), 1);
     }
 }
 void TestRelevance() {
@@ -366,7 +452,7 @@ void TestRelevance() {
         const double rel = (log(2.0 / 1)) * 0.25;
         const auto find_doc = server.FindTopDocuments("cat"s);
         const double find_rel = find_doc[0].relevance;
-        assert(rel == find_rel);
+        ASSERT_EQUAL(rel, find_rel);
     }
 }
 
