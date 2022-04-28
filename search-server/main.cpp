@@ -176,7 +176,6 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
-        // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
@@ -209,7 +208,6 @@ private:
         return query;
     }
 
-    // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const {
         return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
     }
@@ -359,7 +357,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     }
 }
 
-void TestMinusWords() {
+void TestExcludeMinusWords() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
@@ -367,19 +365,20 @@ void TestMinusWords() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         ASSERT(server.FindTopDocuments("-cat").empty());
+        ASSERT(!server.FindTopDocuments("cat").empty());
     }
 }
-void TestMatching() {
+void TestMatchingDocuments() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        const auto match_doc = server.MatchDocument("cat", 42);
+        const auto [match_words, status] = server.MatchDocument("cat", 42);
         vector<string> words = { "cat" };
-        ASSERT_EQUAL(get<0>(match_doc), words);
-        ASSERT(get<1>(match_doc) == DocumentStatus::ACTUAL);
+        ASSERT_EQUAL(match_words, words);
+        ASSERT(status == DocumentStatus::ACTUAL);
     }
 }
 void TestSortOfRelevance() {
@@ -391,8 +390,8 @@ void TestSortOfRelevance() {
     const vector<int> ratings2 = { 1, 2, 3 };
     {
         SearchServer server;
-        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
         server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings1);
         const auto found_docs = server.FindTopDocuments("cat in the city");
         const Document& doc0 = found_docs[0];
         const Document& doc1 = found_docs[1];
@@ -400,7 +399,7 @@ void TestSortOfRelevance() {
         ASSERT_EQUAL(doc1.id, doc_id2);
     }
 }
-void TestRating() {
+void TestRatingCalculation() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
@@ -409,10 +408,11 @@ void TestRating() {
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("cat"s);
         const Document& doc0 = found_docs[0];
-        ASSERT_EQUAL_HINT(doc0.rating, 2, "The rating does not match"s);
+        const int average_rating = accumulate(ratings.begin(), ratings.end(), 0) / ratings.size();
+        ASSERT_EQUAL_HINT(doc0.rating, average_rating, "The rating does not match"s);
     }
 }
-void TestPredicate() {
+void TestTransferPredicate() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
@@ -422,12 +422,13 @@ void TestPredicate() {
         const auto found_docs = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
             { return document_id % 2 == 0; });
         ASSERT_EQUAL(found_docs.size(), 1);
+
         const auto found_docs0 = server.FindTopDocuments("cat", [](int document_id, DocumentStatus, int)
             { return document_id % 2 != 0; });
         ASSERT(found_docs0.empty());
     }
 }
-void TestStatus() {
+void TestSelectionStatus() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
@@ -435,10 +436,10 @@ void TestStatus() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::IRRELEVANT, ratings);
         const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
     }
 }
-void TestRelevance() {
+void TestCalculationRelevance() {
     const int doc_id0 = 42;
     const string content0 = "cat in the city"s;
     const vector<int> ratings0 = { 1, 2, 3 };
@@ -458,13 +459,13 @@ void TestRelevance() {
 
 void TestSearchServer() {
     TestExcludeStopWordsFromAddedDocumentContent();
-    TestMinusWords();
-    TestMatching();
+    TestExcludeMinusWords();
+    TestMatchingDocuments();
     TestSortOfRelevance();
-    TestRating();
-    TestPredicate();
-    TestStatus();
-    TestRelevance();
+    TestRatingCalculation();
+    TestTransferPredicate();
+    TestSelectionStatus();
+    TestCalculationRelevance();
 }
 // --------- Окончание модульных тестов поисковой системы -----------
 
