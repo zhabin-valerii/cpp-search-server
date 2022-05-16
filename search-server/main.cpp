@@ -369,26 +369,96 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
     }
 }
 
-int main() {
-    setlocale(LC_ALL, "Russian");
-    try {
-        SearchServer search_server("и в на"s);
-        AddDocument(search_server, 1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-        AddDocument(search_server, 1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
-        AddDocument(search_server, -1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
-        AddDocument(search_server, 3, "большой пёс скво\x12рец евгений"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
-        AddDocument(search_server, 4, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
-
-        FindTopDocuments(search_server, "пушистый -пёс"s);
-        FindTopDocuments(search_server, "пушистый --кот"s);
-        FindTopDocuments(search_server, "пушистый -"s);
-
-        MatchDocuments(search_server, "пушистый пёс"s);
-        MatchDocuments(search_server, "модный -кот"s);
-        MatchDocuments(search_server, "модный --пёс"s);
-        MatchDocuments(search_server, "пушистый - хвост"s);
+template<typename ItRange>
+class IteratorRange {
+public:
+    IteratorRange(ItRange begin, ItRange end) :
+        begin_(begin),
+        end_(end),
+        size_(distance(begin, end))
+    {
     }
-    catch (const exception& e) {
-        cout << "Ошибка добавления стоп слов: "s << e.what() << endl;
+
+    auto begin() const {
+        return begin_;
+    }
+
+    auto end() const {
+        return end_;
+    }
+
+    auto size() const {
+        return size_;
+    }
+
+private:
+    ItRange begin_;
+    ItRange end_;
+    size_t size_;
+};
+
+template<typename Iterator>
+class Paginator {
+public:
+    Paginator(Iterator begin, Iterator end, size_t size) {
+        for (size_t left = distance(begin, end); left > 0;) {
+            const size_t current_page_size = min(size, left);
+            const Iterator current_page_end = next(begin, current_page_size);
+            docs_.push_back({ begin, current_page_end });
+
+            left -= current_page_size;
+            begin = current_page_end;
+        }
+    }
+
+    auto begin() const {
+        return docs_.begin();
+    }
+
+    auto end() const {
+        return docs_.end();
+    }
+
+private:
+    vector<IteratorRange<Iterator>> docs_;
+};
+
+ostream& operator<<(ostream& out, const Document docs) {
+    out << "{ "s << "document_id = "s << docs.id
+        << ", relevance = "s << docs.relevance
+        << ", rating = "s << docs.rating << " }"s;
+    return out;
+}
+
+template <typename It>
+ostream& operator<<(ostream& out, const IteratorRange<It>& page) {
+    for (It it = page.begin(); it != page.end(); ++it) {
+        out << *it;
+    }
+    return out;
+}
+
+template <typename Container>
+auto Paginate(const Container& c, size_t page_size) {
+    return Paginator(begin(c), end(c), page_size);
+}
+
+int main() {
+    SearchServer search_server("and with"s);
+
+    search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+    search_server.AddDocument(3, "big cat nasty hair"s, DocumentStatus::ACTUAL, { 1, 2, 8 });
+    search_server.AddDocument(4, "big dog cat Vladislav"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
+    search_server.AddDocument(5, "big dog hamster Borya"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
+
+    const auto search_results = search_server.FindTopDocuments("curly dog"s);
+    int page_size = 2;
+    const auto pages = Paginate(search_results, page_size);
+
+    // Выводим найденные документы по страницам
+    for (auto page = pages.begin(); page != pages.end(); ++page) {
+        cout << *page << endl;
+        cout << "Page break"s << endl;
     }
 }
