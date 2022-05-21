@@ -4,26 +4,11 @@
 #include "request_queue.h"
 #include "paginator.h"
 
-#include <string>
 #include <iostream>
 #include <vector>
 
 using namespace std;
 
-std::ostream& operator<<(std::ostream& out, const Document docs) {
-    out << "{ "s << "document_id = "s << docs.id
-        << ", relevance = "s << docs.relevance
-        << ", rating = "s << docs.rating << " }"s;
-    return out;
-}
-
-template <typename It>
-std::ostream& operator<<(std::ostream& out, const IteratorRange<It>& page) {
-    for (It it = page.begin(); it != page.end(); ++it) {
-        out << *it;
-    }
-    return out;
-}
 
 int main() {
     SearchServer search_server("and in at"s);

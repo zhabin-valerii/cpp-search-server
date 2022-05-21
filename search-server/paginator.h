@@ -1,10 +1,8 @@
 #pragma once
-#include "document.h"
-#include"search_server.h"
 
 #include <string>
 #include <vector>
-#include <deque>
+#include <algorithm>
 
 template<typename ItRange>
 class IteratorRange {
@@ -63,4 +61,12 @@ private:
 template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
+}
+
+template <typename It>
+std::ostream& operator<<(std::ostream& out, const IteratorRange<It>& page) {
+    for (It it = page.begin(); it != page.end(); ++it) {
+        out << *it;
+    }
+    return out;
 }

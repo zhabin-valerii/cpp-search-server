@@ -1,7 +1,6 @@
 #include "read_input_functions.h"
 
 #include <iostream>
-#include <string>
 
 std::string ReadLine() {
     std::string s;

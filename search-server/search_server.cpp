@@ -4,11 +4,7 @@
 #include <utility>
 #include <iostream>
 #include <numeric>
-#include <algorithm>
-#include <math.h>
-#include <vector>
-#include <set>
-#include <map>
+#include <cmath>
 
 
 SearchServer::SearchServer(const std::string& stop_words_text)

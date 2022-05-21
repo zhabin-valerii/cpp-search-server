@@ -1,7 +1,6 @@
 #pragma once
+#include <iostream>
 
-
-const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
 struct Document {
     Document();
@@ -19,3 +18,5 @@ enum class DocumentStatus {
     BANNED,
     REMOVED,
 };
+
+std::ostream& operator<<(std::ostream& out, const Document docs);
