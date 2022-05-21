@@ -26,7 +26,7 @@ void RequestQueue::AddResult(int results_num) {
     ++current_time_;
 
     while (!requests_.empty() && min_in_day_ <= current_time_ - requests_.front().timestamp) {
-        if (0 == requests_.front().results) {
+        if (requests_.front().results == 0) {
             --no_results_requests_;
         }
         requests_.pop_front();

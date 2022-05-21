@@ -5,7 +5,6 @@
 #include "paginator.h"
 
 #include <iostream>
-#include <vector>
 
 using namespace std;
 
