@@ -3,6 +3,7 @@
 #include "search_server.h"
 #include "request_queue.h"
 #include "paginator.h"
+#include "log_duration.h"
 
 #include <iostream>
 
@@ -20,15 +21,23 @@ int main() {
     search_server.AddDocument(5, "big dog sparrow Vasiliy"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
 
     // 1439 запросов с нулевым результатом
-    for (int i = 0; i < 1439; ++i) {
-        request_queue.AddFindRequest("empty request"s);
-    }
+    //for (int i = 0; i < 1439; ++i) {
+    //    request_queue.AddFindRequest("empty request"s);
+    //}
     // все еще 1439 запросов с нулевым результатом
-    request_queue.AddFindRequest("curly dog"s);
+    //request_queue.AddFindRequest("curly dog"s);
     // новые сутки, первый запрос удален, 1438 запросов с нулевым результатом
-    request_queue.AddFindRequest("big collar"s);
+    //request_queue.AddFindRequest("big collar"s);
     // первый запрос удален, 1437 запросов с нулевым результатом
-    request_queue.AddFindRequest("sparrow"s);
-    std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
+    //request_queue.AddFindRequest("sparrow"s);
+    //std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
+
+    {
+        LOG_DURATION_STREAM("Operation time"s, cout);
+        auto docs = search_server.FindTopDocuments("curly cat"s);
+        for (const auto& res : docs) {
+            cout << res << endl;
+        }
+    }
     return 0;
 }
