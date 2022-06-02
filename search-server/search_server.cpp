@@ -28,6 +28,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
+        document_to_word_freqs_[document_id][word] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
     document_ids_.push_back(document_id);
@@ -47,13 +48,6 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 
 int SearchServer::GetDocumentCount() const {
     return documents_.size();
-}
-
-int SearchServer::GetDocumentId(int index) const {
-    if (index >= 0 && index < GetDocumentCount()) {
-        return document_ids_[index];
-    }
-    throw std::out_of_range("out of range"s);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
@@ -77,6 +71,30 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         }
     }
     return { matched_words, documents_.at(document_id).status };
+}
+
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static const std::map<std::string, double> dummy;
+    if (count(document_ids_.begin(),document_ids_.end(),document_id)==0){
+        return dummy;
+    }
+    const auto& word = document_to_word_freqs_.at(document_id);
+    return word;
+}
+
+void SearchServer::RemoveDocument(int document_id) {
+    for (auto& element : word_to_document_freqs_) {
+        if (element.second.count(document_id)) {
+            element.second.erase(document_id);
+        }
+    }
+    if (documents_.count(document_id)) {
+        documents_.erase(document_id);
+    }
+    if (document_to_word_freqs_.count(document_id)) {
+        document_to_word_freqs_.erase(document_id);
+    }
+    document_ids_.erase(remove(document_ids_.begin(), document_ids_.end(), document_id), document_ids_.end());
 }
 
 //private
