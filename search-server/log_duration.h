@@ -14,9 +14,9 @@ public:
     // с помощью using для удобства
     using Clock = std::chrono::steady_clock;
 
-    LogDuration(const std::string& id, std::ostream& out=std::cerr) :
-        id_(id),
-        out_(out) {}
+    LogDuration(const std::string& id, std::ostream& out = std::cerr) :
+        out_(out),
+        id_(id) {}
 
     ~LogDuration() {
         using namespace std::chrono;
