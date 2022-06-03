@@ -20,10 +20,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     if (documents_.count(document_id) > 0) {
         throw std::invalid_argument("invalid id: id already exists"s);
     }
-    std::vector<std::string> words;
-    if (!SplitIntoWordsNoStop(document, words)) {
-        throw std::invalid_argument("invalid symbols"s);
-    }
+    std::vector<std::string> words = SplitIntoWordsNoStop(document);
 
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
@@ -31,7 +28,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
         document_to_word_freqs_[document_id][word] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
-    document_ids_.push_back(document_id);
+    document_ids_.emplace(document_id);
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
@@ -75,7 +72,7 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
     static const std::map<std::string, double> dummy;
-    if (count(document_ids_.begin(),document_ids_.end(),document_id)==0){
+    if (count(document_ids_.begin(),document_ids_.end(),document_id) == 0) {
         return dummy;
     }
     const auto& word = document_to_word_freqs_.at(document_id);
@@ -83,9 +80,9 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    for (auto& element : word_to_document_freqs_) {
-        if (element.second.count(document_id)) {
-            element.second.erase(document_id);
+    for (auto& [str,id] : word_to_document_freqs_) {
+        if (id.count(document_id)) {
+            id.erase(document_id);
         }
     }
     if (documents_.count(document_id)) {
@@ -94,7 +91,7 @@ void SearchServer::RemoveDocument(int document_id) {
     if (document_to_word_freqs_.count(document_id)) {
         document_to_word_freqs_.erase(document_id);
     }
-    document_ids_.erase(remove(document_ids_.begin(), document_ids_.end(), document_id), document_ids_.end());
+    document_ids_.erase(document_id);
 }
 
 //private
@@ -110,19 +107,17 @@ bool SearchServer::IsValidWord(const std::string& word) {
         });
 }
 
-bool SearchServer::SplitIntoWordsNoStop(const std::string& text, std::vector<std::string>& result) const {
-    result.clear();
+std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const {
     std::vector<std::string> words;
     for (const std::string& word : SplitIntoWords(text)) {
         if (!IsValidWord(word)) {
-            return false;
+            throw std::invalid_argument("invalid symbols"s);
         }
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
     }
-    result.swap(words);
-    return true;
+    return words;
 }
 
 int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {

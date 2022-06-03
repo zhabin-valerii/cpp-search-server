@@ -3,26 +3,23 @@
 using namespace std::string_literals;
 
 void RemoveDuplicates(SearchServer& search_server) {
-	std::map<int, std::set<std::string>> id_words;
+	std::map<std::set<std::string>,int> id_words;
+	std::set<int> ids_delited;
 	for (const int id_doc : search_server) {
 		const auto& words = search_server.GetWordFrequencies(id_doc);
 		std::set<std::string> set_words;
-		for (auto& word : words) {
-			set_words.insert(word.first);
+		for (auto& [str,freq] : words) {
+			set_words.insert(str);
 		}
-		id_words.emplace(id_doc,set_words);
+		if (!id_words.count(set_words)) {
+			id_words.emplace(set_words, id_doc);
+		}
+		else {
+			ids_delited.insert(id_doc);
+		}
 	}
-	std::set<int> ids_delited;
-	for (auto i = id_words.begin(); i != id_words.end(); ++i) {
-		for (auto j = id_words.begin(); j != id_words.end();) {
-			++j;
-			if (j != id_words.end()&&i->first<j->first) {
-				if (i->second == j->second) {
-					search_server.RemoveDocument(j->first);
-					ids_delited.insert(j->first);
-				}
-			}
-		}
+	for (auto i = ids_delited.begin(); i != ids_delited.end(); ++i) {
+		search_server.RemoveDocument(*i);
 	}
 	for (auto id : ids_delited) {
 		std::cout << "Found duplicate document id "s << id << std::endl;
