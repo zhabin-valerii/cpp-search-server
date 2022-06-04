@@ -6,6 +6,8 @@
 #include <numeric>
 #include <cmath>
 
+using namespace std::string_literals;
+
 
 SearchServer::SearchServer(const std::string& stop_words_text)
     : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
@@ -75,15 +77,12 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
     if (count(document_ids_.begin(),document_ids_.end(),document_id) == 0) {
         return dummy;
     }
-    const auto& word = document_to_word_freqs_.at(document_id);
-    return word;
+    return document_to_word_freqs_.at(document_id);
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    for (auto& [str,id] : word_to_document_freqs_) {
-        if (id.count(document_id)) {
-            id.erase(document_id);
-        }
+    for (auto& [str,id] : document_to_word_freqs_.at(document_id)) {
+        word_to_document_freqs_[str].erase(document_id);
     }
     if (documents_.count(document_id)) {
         documents_.erase(document_id);

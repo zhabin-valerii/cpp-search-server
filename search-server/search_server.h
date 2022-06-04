@@ -11,12 +11,8 @@
 #include <map>
 #include <stdexcept>
 
-using namespace std::string_literals;
-
-
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 constexpr auto INACCURACY = 1e-6;
-
 
 class SearchServer {
 public:
@@ -121,6 +117,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 
 template <typename StringContainer>
 std::set<std::string> SearchServer::MakeUniqueNonEmptyStrings(const StringContainer& strings) {
+    using namespace std::string_literals;
     std::set<std::string> non_empty_strings;
     for (const std::string& str : strings) {
         if (!IsValidWord(str)) {

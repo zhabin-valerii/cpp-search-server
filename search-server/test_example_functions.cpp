@@ -1,5 +1,8 @@
 #include "test_example_functions.h"
 #include "document.h"
+
+using namespace std::string_literals;
+
 void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status,
     const std::vector<int>& ratings) {
     try {
