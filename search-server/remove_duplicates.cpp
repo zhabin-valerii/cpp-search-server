@@ -3,11 +3,11 @@
 using namespace std::string_literals;
 
 void RemoveDuplicates(SearchServer& search_server) {
-	std::map<std::set<std::string>,int> id_words;
+	std::map<std::set<std::string_view>,int> id_words;
 	std::set<int> ids_delited;
 	for (const int id_doc : search_server) {
 		const auto& words = search_server.GetWordFrequencies(id_doc);
-		std::set<std::string> set_words;
+		std::set<std::string_view> set_words;
 		for (auto& [str,freq] : words) {
 			set_words.insert(str);
 		}
