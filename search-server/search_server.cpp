@@ -85,6 +85,7 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
 
 std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(std::execution::parallel_policy, const std::string_view raw_query, int document_id) const {
     using namespace std::string_literals;
+
     if (!documents_.count(document_id)) {
         throw std::out_of_range("No document with id "s + std::to_string(document_id));
     }
