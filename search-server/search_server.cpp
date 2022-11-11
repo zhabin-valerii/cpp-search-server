@@ -28,19 +28,21 @@ void SearchServer::AddDocument(int document_id, const std::string_view document,
     if (documents_.count(document_id) > 0) {
         throw std::invalid_argument("invalid id: id already exists"s);
     }
-    documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status, std::string(document) });
-    const auto words = SplitIntoWordsNoStop(documents_[document_id].data);
+    buffer_[document_id] = document;
+    const auto words = SplitIntoWordsNoStop(buffer_[document_id]);
 
     const double inv_word_count = 1.0 / words.size();
     for (const std::string_view word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
         document_to_word_freqs_[document_id][word] += inv_word_count;
     }
+    documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
     document_ids_.emplace(document_id);
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query, DocumentStatus status) const {
     return FindTopDocuments(
+        std::execution::seq,
         raw_query,
         [status](int document_id, DocumentStatus document_status, int rating) {
             return document_status == status;
@@ -48,7 +50,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query) const {
-    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+    return FindTopDocuments(std::execution::seq, raw_query, DocumentStatus::ACTUAL);
 }
 
 int SearchServer::GetDocumentCount() const {
