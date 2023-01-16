@@ -23,10 +23,3 @@ std::list<Document> ProcessQueriesJoined(
     }
     return documents_lists;
 }
-/*const int space_count = transform_reduce(
-        execution::par,  // для демонстрации, можно и убрать
-        s.begin(), s.end(),  // входной диапазон
-        0,  // начальное значение
-        plus<>{},  // reduce-операция (группирующая функция)
-        [](char c) { return c == ' '; }  // map-операция
-    );*/

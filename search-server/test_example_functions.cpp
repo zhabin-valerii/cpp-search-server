@@ -13,13 +13,13 @@ void AddDocument(SearchServer& search_server, int document_id, const std::string
     }
 }
 void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query) {
-    std::cout << "Результаты поиска по запросу: "s << raw_query << std::endl;
+    std::cout << "Search results for: "s << raw_query << std::endl;
     try {
         for (const Document& document : search_server.FindTopDocuments(raw_query)) {
             std::cout << document;
         }
     }
     catch (const std::exception& e) {
-        std::cout << "Ошибка поиска: "s << e.what() << std::endl;
+        std::cout << "Search error: "s << e.what() << std::endl;
     }
 }

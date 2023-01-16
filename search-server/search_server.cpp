@@ -12,7 +12,7 @@ using namespace std::string_literals;
 
 
 SearchServer::SearchServer(const std::string& stop_words_text)
-    : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
+    : SearchServer(SplitIntoWords(stop_words_text))
 {
 }
 SearchServer::SearchServer(const std::string_view stop_words_text)
@@ -102,22 +102,6 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
             auto it = word_to_document_freqs_.find(word);
             return it != word_to_document_freqs_.end() && it->second.count(document_id) != 0;
         });
-    //std::sort(matched_words.begin(), matched_words.end());
-    //auto last = std::unique(matched_words.begin(), matched_words.end());
-    //matched_words.erase(last - 1, matched_words.end());
-    //”дал€ю дубликаты
-    //size_t index = matched_words.size();
-    //std::set<std::string_view> s;
-    //for (unsigned i = 0; i < index; ++i) {
-    //    if (matched_words[i] != "") {
-    //        s.insert(matched_words[i]);
-    //    }
-    //}
-    //matched_words.resize(s.size());
-    //index = 0;
-    //for (auto w : s) {
-    //    matched_words[index] = w; ++index;
-    //}
     return { matched_words, documents_.at(document_id).status };
 }
 
@@ -192,7 +176,6 @@ bool SearchServer::IsStopWord(const std::string_view word) const {
 }
 
 bool SearchServer::IsValidWord(const std::string_view word) {
-    // A valid word must not contain special characters
     return std::none_of(word.begin(), word.end(), [](char c) {
         return c >= '\0' && c < ' ';
         });

@@ -100,7 +100,6 @@ private:
 
     Query ParseQuery(const std::string_view text) const;
 
-    // Existence required
     double ComputeWordInverseDocumentFreq(const std::string_view word) const;
 
     template <typename DocumentPredicate, typename ExecutionPolicy>
